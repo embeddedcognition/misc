@@ -1,0 +1,79 @@
+
+
+## OUTPUT (LOGITS) LAYER
+## Returns predictions as raw values in a [batch_size, num_target_classes]-dimensional tensor
+logits = model(x_batch, keep_prob)
+
+We need to convert these raw values to probabilities using the sofmax function, 
+it outputs a probability distribution, with the maximal element getting the largest 
+portion of the distribution.
+
+Let's convert these raw values into two different formats that our model function can return:
+
+•The predicted class for each example: a digit from 0–9.
+•The probabilities for each possible target class for each example: the probability that the example 
+ is a 0, is a 1, is a 2, etc.
+
+For a given example, our predicted class is the element in the corresponding row of the logits tensor 
+with the highest raw value. We can find the index of this element using the tf.argmax function:
+
+tf.argmax(input=logits, axis=1)
+
+We can derive probabilities from our logits layer by applying softmax activation using tf.nn.softmax
+
+tf.nn.softmax(logits, name="softmax_tensor")
+
+predictions = {
+    "classes": tf.argmax(input=logits, axis=1),
+    "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
+}
+if mode == tf.estimator.ModeKeys.PREDICT:
+  return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
+
+Calculate Loss
+
+For both training and evaluation, we need to define a loss function that measures how closely the 
+model's predictions match the target classes. For multiclass classification problems like MNIST, 
+cross entropy is typically used as the loss metric. The following code calculates cross entropy when 
+the model runs in either TRAIN or EVAL mode:
+
+loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
+
+Now we need to define a loss function (measure error):
+
+Cross entropy (log loss) indicates the distance between what the model believes the output distribution 
+should be, and what the original distribution really is. Cross entropy measure is a widely used 
+alternative of squared error. It is used when node activations can be understood as representing 
+the probability that each hypothesis might be true, i.e. when the output is a probability distribution. 
+Thus it is used as a loss function in neural networks which have softmax activations in the output layer.
+
+tf.losses.softmax_cross_entropy(labels=?, logits=?)
+
+
+#placeholders
+x_batch = tf.placeholder(tf.float32, (None, 32, 32, 3)) #example batch - images are color so depth is 3
+y_batch = tf.placeholder(tf.int32, (None)) #label batch
+keep_prob = tf.placeholder(tf.float32) #the probability that each neuron is kept
+
+
+#one hot encode labels
+one_hot_y = tf.one_hot(y_batch, 43) #we have 43 classes
+
+
+
+
+#logits are linear outputs of our last layer
+logits = model(x_batch, keep_prob) 
+
+tf.losses.sparse_softmax_cross_entropy, calculates the softmax crossentropy 
+(aka: categorical crossentropy, negative log-likelihood) from these two inputs 
+in an efficient, numerically stable way.
+
+#computes the softmax crossentropy
+cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, one_hot_y)
+
+loss_operation = tf.reduce_mean(cross_entropy)
+
+optimizer = tf.train.AdamOptimizer(learning_rate=learn_rate)
+
+training_operation = optimizer.minimize(loss_operation)
